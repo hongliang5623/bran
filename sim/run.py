@@ -2,9 +2,14 @@
 import sys
 import math
 from texttable import Texttable
+from collections import defaultdict
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
+
+MOVIE_DATA_FILE = 'G:\Datas\ml-100k\u.item'
+USER_RATING_FILE = 'G:\Datas\ml-100k\u.data'
+TARGET_USER_ID = 50
 
 
 # 算法流程：
@@ -24,22 +29,24 @@ sys.setdefaultencoding('utf-8')
 # 计算余弦距离
 # listUser2Score[2]=[(1,5),(4,2)].... 表示用户2对电影1的评分是5，对电影4的评分是2
 # dist = getCosDist(listUser2Score[userId], listUser2Score[neighbor])
-def getCosDist(user1, user2):
+def getCosDist(user1_rate_datas, user2_rate_datas):
+    # item_id, rate
     sum_x = 0.0
     sum_y = 0.0
     sum_xy = 0.0
-    for key1 in user1:
-        for key2 in user2:
+    for item1_rate in user1_rate_datas:
+        for item2_rate in user2_rate_datas:
             # key1[0]表示电影id，key1[1]表示对电影的评分
             # 如果是两个用户共同评价的一部电影
-            if key1[0] == key2[0]:
-                sum_x += key1[1] * key1[1]
-                sum_y += key2[1] * key2[1]
-                sum_xy += key1[1] * key2[1]
+            if item1_rate[0] == item2_rate[0]:
+                sum_x += item1_rate[1] * item1_rate[1]
+                sum_y += item2_rate[1] * item2_rate[1]
+                sum_xy += item1_rate[1] * item2_rate[1]
     if sum_xy == 0.0:
         return 0
     demo = math.sqrt(sum_x * sum_y)
-    return sum_xy / demo
+    dis = sum_xy / demo
+    return dis
 
 
 # 读取文件，读取以行为单位，每一行是列表里的一个元素
@@ -65,24 +72,16 @@ def getRatingInfo(ratings):
 # 生成用户评分数据结构
 def getUserScoreDataStructure(rates):
     # listUser2Score[2]=[(1,5),(4,2)].... 表示用户2对电影1的评分是5，对电影4的评分是2
-    # {user_id:(item_id, rating)}
-    listUser2Score = {}
+    listuser2score = defaultdict(list)
     # dictItem2Users{}, key=item id,value=user id list
-    dictItem2Users = {}
+    dictitem2users = defaultdict(list)
     for k in rates:
         #  u.data
         #  user id | item id | rating | timestamp.
         user_rank = (k[1], k[2])
-        if k[0] in listUser2Score:
-            listUser2Score[k[0]].append(user_rank)
-        else:
-            listUser2Score[k[0]] = [user_rank]
-
-        if k[1] in dictItem2Users:
-            dictItem2Users[k[1]].append(k[0])
-        else:
-            dictItem2Users[k[1]] = [k[0]]
-    return listUser2Score, dictItem2Users
+        listuser2score[k[0]].append(user_rank)
+        dictitem2users[k[1]].append(k[0])
+    return listuser2score, dictitem2users
 
 
 # 计算与目标用户
@@ -111,16 +110,16 @@ def getNearestNeighbor(userId, listUser2Score, dictItem2Users):
 
 
 # 使用UserFC进行推荐，输入：文件名,用户ID,邻居数量
-def recommendByUserFC(filename, userId, k=5):
-    # 读取文件
-    contents = readFile(filename)
-    # 文件格式数据转化为二维数组
-    rates = getRatingInfo(contents)
-    # 格式化成字典数据
-    listUser2Score, dictItem2Users = getUserScoreDataStructure(rates)
+def recommendByUserFC(userId, listUser2Score, dictItem2Users, k=5):
+    # listUser2Score, dictItem2Users = getUserRatingData()
+
     # 找邻居
-    # 找出最相似的前五个邻居
+    # 找出与k个指定user_id最相似的前五个邻居
     neighborsTopK = getNearestNeighbor(userId, listUser2Score, dictItem2Users)[:5]
+    print 'target user', userId, listUser2Score[userId]
+    for neighbor in neighborsTopK:
+        neighbor_dist, neighbor_id = neighbor
+        print 'top neighbor:', neighbor_id, neighbor_dist, listUser2Score[neighbor_id]
     # neighborsTopK存储了相似度和邻居id的倒排表
     # 所以neighbor[1]表示邻居id，neighbor[0]表示相似度
     # 这里的推荐思路是：对于最近k邻居看过的所有电影中的某一电影m
@@ -129,26 +128,26 @@ def recommendByUserFC(filename, userId, k=5):
     # 建立推荐字典
     recommand_dict = {}
     for neighbor in neighborsTopK:
-        neighbor_user_id = neighbor[1]
+        neighbor_dist, neighbor_id = neighbor
         # 找出这个邻居看过的所有电影信息
-        movies = listUser2Score[neighbor_user_id]
-        for movie in movies:
-            if movie[0] not in recommand_dict:
-                recommand_dict[movie[0]] = neighbor[0]
+        movie_scores = listUser2Score[neighbor_id]
+        for movie_score in movie_scores:
+            movie, _ = movie_score
+            if movie not in recommand_dict:
+                recommand_dict[movie] = neighbor_dist
             else:
-                recommand_dict[movie[0]] += neighbor[0]
+                recommand_dict[movie] += neighbor_dist
                 # 建立推荐列表
     recommand_list = []
-    for key in recommand_dict:
+    for movie_id in recommand_dict:
         # 建立目标用户兴趣度-电影id的倒排表
-        recommand_list.append([recommand_dict[key], key])
+        recommand_list.append([recommand_dict[movie_id], movie_id])
     recommand_list.sort(reverse=True)
-    # listUser2Score列表里边的元素是电影id到电影评分的键值对
-    # 所以这里的k[0]表示电影id，k[1]表示电影评分
-    user_movies = [k[0] for k in listUser2Score[userId]]
     # recommand_list存储的是目标用户兴趣度到电影id的倒排表
     # 所以这里的的k[1]表示的是电影id，k[0]表示的是兴趣度
-    return [k[1] for k in recommand_list], user_movies, dictItem2Users, neighborsTopK
+    recommend_movies = [k[1] for k in recommand_list]
+    neighbor_users = [k[1] for k in neighborsTopK]
+    return recommend_movies, neighbor_users
 
 
 # 获取电影的列表
@@ -158,17 +157,29 @@ def getMovieList(filename):
     for movie in contents:
         single_info = movie.split("|")
         movies_info[int(single_info[0])] = single_info[1:]
-        print single_info, len(single_info)
+        # print single_info, len(single_info)
     return movies_info
+
+
+# 获取电影的列表
+def getUserRatingData(filename):
+    # 读取文件
+    contents = readFile(filename)
+    # 文件格式数据转化为二维数组
+    rates = getRatingInfo(contents)
+    # 格式化成字典数据
+    listUser2Score, dictItem2Users = getUserScoreDataStructure(rates)
+    return listUser2Score, dictItem2Users
 
 
 if __name__ == '__main__':
 
     # 获取所有电影的列表,所有电影id到电影名字的键值对
-    dictMovieId2Info = getMovieList("G:\Datas\ml-100k\u.item")
-    # print dictMovieId2Info
-    listRecommendMovieId, user_movie, items_movie, neighbors = recommendByUserFC("G:\Datas\ml-100k\u.data", 50, 80)
-    neighbors_id = [i[1] for i in neighbors]
+    dictMovieId2Info = getMovieList(MOVIE_DATA_FILE)
+    listUser2Score, dictItem2Users = getUserRatingData(USER_RATING_FILE)
+    user_movies = [k[0] for k in listUser2Score[TARGET_USER_ID]]
+    listRecommendMovieId, neighbors_id = recommendByUserFC(
+        TARGET_USER_ID, listUser2Score, dictItem2Users, 80)
     table = Texttable()
     table.set_deco(Texttable.HEADER)
     table.set_cols_dtype(['t', 't', 't'])
@@ -178,10 +189,12 @@ if __name__ == '__main__':
     # 打印推荐列表的前20项数据，listRecommendMovieId里边存储的仅仅是id
     for movie_id in listRecommendMovieId[:20]:
         from_user = []
-        for user_id in items_movie[movie_id]:
+        for user_id in dictItem2Users[movie_id]:
             if user_id in neighbors_id:
                 from_user.append(user_id)
                 # dictMovieId2Info[movie_id][0]表示电影名 dictMovieId2Info[movie_id][1]表示时间
-        rows.append([dictMovieId2Info[movie_id][0], dictMovieId2Info[movie_id][1], from_user])
+                movie_title = dictMovieId2Info[movie_id][0]
+                create_time = dictMovieId2Info[movie_id][1]
+        rows.append([movie_title, create_time, from_user])
     table.add_rows(rows)
     print table.draw()
