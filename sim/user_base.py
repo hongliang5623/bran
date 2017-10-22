@@ -4,12 +4,14 @@ import math
 from texttable import Texttable
 from collections import defaultdict
 
+from util import cos_distance
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 MOVIE_DATA_FILE = 'G:\Datas\ml-100k\u.item'
 USER_RATING_FILE = 'G:\Datas\ml-100k\u.data'
-TARGET_USER_ID = 50
+TARGET_USER_ID = 100
 
 
 # 算法流程：
@@ -46,6 +48,24 @@ def getCosDist(user1_rate_datas, user2_rate_datas):
         return 0
     demo = math.sqrt(sum_x * sum_y)
     dis = sum_xy / demo
+    return dis
+
+
+def getCosDistNew(user1_rate_datas, user2_rate_datas):
+    # item_id, rate
+    user1_rating = []
+    user2_rating = []
+    for item1_rate in user1_rate_datas:
+        for item2_rate in user2_rate_datas:
+            # key1[0]表示电影id，key1[1]表示对电影的评分
+            # 如果是两个用户共同评价的一部电影
+            if item1_rate[0] == item2_rate[0]:
+                user1_rating.append(item1_rate[1])
+                user2_rating.append(item2_rate[1])
+    if len(user1_rating) <= 2:
+        return 0
+    dis = cos_distance(user1_rating, user2_rating)
+    # print 'user1, user2 mark same movie: %s, distance is: %s' % (len(user1_rating), dis)
     return dis
 
 
@@ -102,7 +122,7 @@ def getNearestNeighbor(userId, listUser2Score, dictItem2Users):
     # 里边存储的是[相似度，邻居id]
     for neighbor in neighbors:
         # listUser2Score[2]=[(1,5),(4,2)].... 表示用户2对电影1的评分是5，对电影4的评分是2
-        dist = getCosDist(listUser2Score[userId], listUser2Score[neighbor])
+        dist = getCosDistNew(listUser2Score[userId], listUser2Score[neighbor])
         neighbors_dist.append([dist, neighbor])
     # 按照相似度倒排，相似度从道到低
     neighbors_dist.sort(reverse=True)
@@ -116,7 +136,7 @@ def recommendByUserFC(userId, listUser2Score, dictItem2Users, k=5):
     # 找出与k个指定user_id最相似的前五个邻居
     neighborsTopK = getNearestNeighbor(userId, listUser2Score, dictItem2Users)[:5]
     print 'target user', userId
-    display_user_movie(userId)
+    # display_user_movie(userId)
     for neighbor in neighborsTopK[:2]:
         neighbor_dist, neighbor_id = neighbor
         print 'top neighbor:', neighbor_id, neighbor_dist
