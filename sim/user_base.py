@@ -111,15 +111,16 @@ def getNearestNeighbor(userId, listUser2Score, dictItem2Users):
 
 # 使用UserFC进行推荐，输入：文件名,用户ID,邻居数量
 def recommendByUserFC(userId, listUser2Score, dictItem2Users, k=5):
-    # listUser2Score, dictItem2Users = getUserRatingData()
 
     # 找邻居
     # 找出与k个指定user_id最相似的前五个邻居
     neighborsTopK = getNearestNeighbor(userId, listUser2Score, dictItem2Users)[:5]
-    print 'target user', userId, listUser2Score[userId]
-    for neighbor in neighborsTopK:
+    print 'target user', userId
+    display_user_movie(userId)
+    for neighbor in neighborsTopK[:2]:
         neighbor_dist, neighbor_id = neighbor
-        print 'top neighbor:', neighbor_id, neighbor_dist, listUser2Score[neighbor_id]
+        print 'top neighbor:', neighbor_id, neighbor_dist
+        confirm_neighbors(userId, neighbor_id)
     # neighborsTopK存储了相似度和邻居id的倒排表
     # 所以neighbor[1]表示邻居id，neighbor[0]表示相似度
     # 这里的推荐思路是：对于最近k邻居看过的所有电影中的某一电影m
@@ -170,6 +171,28 @@ def getUserRatingData(filename):
     # 格式化成字典数据
     listUser2Score, dictItem2Users = getUserScoreDataStructure(rates)
     return listUser2Score, dictItem2Users
+
+
+def display_user_movie(user_id):
+    dictMovieId2Info = getMovieList(MOVIE_DATA_FILE)
+    listUser2Score, _ = getUserRatingData(USER_RATING_FILE)
+    movie_scores = listUser2Score[user_id]
+    for movie, rating in movie_scores:
+        movie_title = dictMovieId2Info[movie][0]
+        print '---------->>', user_id, movie_title, rating
+
+def confirm_neighbors(user_id1, user_id2):
+    print user_id1, user_id2
+    dictMovieId2Info = getMovieList(MOVIE_DATA_FILE)
+    listUser2Score, _ = getUserRatingData(USER_RATING_FILE)
+    u1_movie_scores = listUser2Score[user_id1]
+    u2_movie_scores = listUser2Score[user_id2]
+    for u1_movie, u1_rating in u1_movie_scores:
+        for u2_movie, u2_rating in u2_movie_scores:
+            if u1_movie == u2_movie:
+                movie_title = dictMovieId2Info[u1_movie][0]
+                print 'they both mark movie:%s, and user1_rating:%s, user2_rating:%s' % (
+                    movie_title, u1_rating, u2_rating)
 
 
 if __name__ == '__main__':
