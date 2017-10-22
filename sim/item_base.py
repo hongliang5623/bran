@@ -11,15 +11,18 @@ users_item_score = {
 }
 
 
-def computeSimilarity(band1, band2, userRatings):
+def count_user_average(userRatings):
     user_average = {}
     # 求出每一个user评价物品的均值
     for (user, item_scores) in userRatings.items():
         user_average[user] = (
             float(sum(item_scores.values())) / len(item_scores.values())
         )
+    return user_average
 
-    print user_average
+
+def countSimilarity(band1, band2, userRatings):
+    user_average = count_user_average(userRatings)
 
     num = 0  # 分子
     dem1 = 0  # 分母一部分
@@ -35,6 +38,6 @@ def computeSimilarity(band1, band2, userRatings):
 
 if __name__ == '__main__':
 
-    print computeSimilarity('Kacey Musgraves', 'Lorde', users_item_score)
-    print computeSimilarity('Imagine Dragons', 'Lorde', users_item_score)
-    print computeSimilarity('Daft Punk', 'Lorde', users_item_score)
+    print countSimilarity('Kacey Musgraves', 'Lorde', users_item_score)
+    print countSimilarity('Imagine Dragons', 'Lorde', users_item_score)
+    print countSimilarity('Daft Punk', 'Lorde', users_item_score)
