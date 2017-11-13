@@ -119,7 +119,7 @@ def getNearestNeighbor(userId, listUser2Score, dictItem2Users):
             if neighbor != userId and neighbor not in neighbors:
                 neighbors.append(neighbor)
     neighbors_dist = []
-    # 里边存储的是[相似度，邻居id]
+    # 存储的是[相似度，邻居id]
     for neighbor in neighbors:
         # listUser2Score[2]=[(1,5),(4,2)].... 表示用户2对电影1的评分是5，对电影4的评分是2
         dist = getCosDistNew(listUser2Score[userId], listUser2Score[neighbor])
@@ -132,15 +132,8 @@ def getNearestNeighbor(userId, listUser2Score, dictItem2Users):
 # 使用UserFC进行推荐，输入：文件名,用户ID,邻居数量
 def recommendByUserFC(userId, listUser2Score, dictItem2Users, k=5):
 
-    # 找邻居
     # 找出与k个指定user_id最相似的前五个邻居
-    neighborsTopK = getNearestNeighbor(userId, listUser2Score, dictItem2Users)[:5]
-    print 'target user', userId
-    # display_user_movie(userId)
-    for neighbor in neighborsTopK[:2]:
-        neighbor_dist, neighbor_id = neighbor
-        print 'top neighbor:', neighbor_id, neighbor_dist
-        confirm_neighbors(userId, neighbor_id)
+    neighborsTopK = getNearestNeighbor(userId, listUser2Score, dictItem2Users)[:k]
     # neighborsTopK存储了相似度和邻居id的倒排表
     # 所以neighbor[1]表示邻居id，neighbor[0]表示相似度
     # 这里的推荐思路是：对于最近k邻居看过的所有电影中的某一电影m
