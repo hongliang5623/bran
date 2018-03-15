@@ -26,7 +26,7 @@ RECORDS = (
 # item_id, user_id, tags
 
 
-def calculate_item_weight():
+def calculate_tag_weight():
     tag_weight = OrderedDict()
     for item_id, user, tags in RECORDS:
         tags = tags.split()

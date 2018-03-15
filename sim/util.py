@@ -75,8 +75,8 @@ def jaccard(p, q):
 
 
 if __name__ == '__main__':
-    user1_score = (5, 5, 5)
-    user2_score = (2, 5, 5)
+    user1_score = (1, 2, 1)
+    user2_score = (2, 4, 5)
     print cos_distance(user1_score, user2_score)
 
     v1 = (1, 1)
